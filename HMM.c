@@ -1,5 +1,4 @@
 #include <unistd.h>
-#include <stdio.h>
 #include <assert.h>
 #include <string.h>
 #include "STD_TYPES.h"
@@ -10,7 +9,6 @@
 
 void *pMyHeapTop = NULL_ptr;
 freeList_t list;
-int flag = 0;
 #define GetProgBreak() (sbrk(0))
 
 
@@ -35,6 +33,7 @@ static uint32_t customCeil(f32_t num) {
 
 void *malloc(uint32_t size)
 {   
+    // printf("Allocated memory of size %d\n", size);
     void *pReturnAddress = NULL_ptr;
     block_t *pSuitableBlock = NULL_ptr;
     error_t kErrorState = kNoError;
@@ -60,7 +59,6 @@ void *malloc(uint32_t size)
             kErrorState &= FreeList_DeleteBlock(&list, pSuitableBlock);
             pReturnAddress = (void*)pSuitableBlock;
         }
-        flag = 0;
     }
     // Case[2]: There is no suitable free block in the free list
     else if ( pSuitableBlock == NULL_ptr)
@@ -94,7 +92,6 @@ void *malloc(uint32_t size)
             {
                 kErrorState = kError;
             }
-            flag =0;
         }
         // Case[2-2]: There is no enough space in the heap
         else if ((void*)((char*)pMyHeapTop + totalSize) > GetProgBreak() ||
@@ -105,14 +102,13 @@ void *malloc(uint32_t size)
             {
                 kErrorState = kError;
             }
-            flag = 1;
         }
     }
 
     // Case No error occurred either by finding a free block or by extending the heap
     if ( kErrorState != kError)
     {
-        // Ccheck if there was a free block in the free list
+        // Check if there wasn't a free block in the free list
         if ( pSuitableBlock == NULL_ptr )
         {
             // Assign the return address to the top of my heap
@@ -128,18 +124,6 @@ void *malloc(uint32_t size)
         // Increment the returned address by the size of the meta data block
         // cast it first to (char *) to make the step size of the ptr 1 byte
         pReturnAddress = (void*)((char *)pReturnAddress+sizeof(metaData_t));
-
-        if ( pMyHeapTop > GetProgBreak())
-        {
-            if ( pSuitableBlock == NULL_ptr)
-            {
-                printf("Suitable block is NULL\n");
-            }
-            printf("Current Heap Top:      %p\n",pMyHeapTop);
-            printf("Current Program break: %p\n",sbrk(0));
-            printf("Current block size     %d\n",totalSize - 24);
-            assert(0&& "Exceeding the program break");
-        }
     }
     return pReturnAddress;
 }
@@ -147,6 +131,7 @@ void *malloc(uint32_t size)
 
 void *calloc(uint32_t nmemb, uint32_t size)
 {
+    // printf("Allocated memory of size %d\n", size);
     void *pReturnAddress = NULL_ptr;
     Size_alignment(size);
     pReturnAddress =  malloc(nmemb * size);
@@ -160,6 +145,7 @@ void *calloc(uint32_t nmemb, uint32_t size)
 
 void *realloc(void *ptr, uint32_t size)
 {
+    // printf("Allocated memory of size %d\n", size);
     void *pReturnAddress = NULL_ptr;
     // Case[1] 
     if ( ptr == NULL_ptr)
@@ -170,6 +156,7 @@ void *realloc(void *ptr, uint32_t size)
     else if ( size == 0)
     {
         free(ptr);
+        pReturnAddress = ptr;
     }
     //Case[3]
     else
@@ -199,6 +186,7 @@ void *realloc(void *ptr, uint32_t size)
                 }
                 // Update the meta data
                 pMetaData->length = size;
+                
             }
             // Case[3-1-2] : if size > old block size
             else if ( size > pMetaData->length)
@@ -207,11 +195,6 @@ void *realloc(void *ptr, uint32_t size)
                 pReturnAddress = malloc(size);
                 if ( pReturnAddress != NULL_ptr)
                 {
-                    // Copy the old data to the new blok of memory
-                    /* 
-                        TODO: change the type from char to long int after doing the alignment                    
-                     
-                    */
                    uint64t iterator = 0;
                    for ( iterator = 0; iterator < (pMetaData->length)/8; iterator++ )
                    {
@@ -222,6 +205,10 @@ void *realloc(void *ptr, uint32_t size)
                 }
             }
         }
+    }
+    if (pReturnAddress == NULL_ptr)
+    {
+        pReturnAddress = ptr;
     }
     return pReturnAddress;
 }

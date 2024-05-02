@@ -5,13 +5,11 @@
  *      Author: Mohamed Refat
  */
 #include <unistd.h>
-#include <stdio.h>
 #include <assert.h>
 #include "STD_TYPES.h"
 #include "FreeList.h"
 #include "HMM_Config.h"
 
-int cnt=0;
 extern void *pMyHeapTop;
 
 void FreeList_Init(freeList_t *pList)
@@ -151,7 +149,6 @@ error_t FreeList_MergeBlocks(freeList_t *pList, block_t *p1stBlock, block_t *p2n
 	error_t kErrorState = kNoError;
 	if ( pList != NULL_ptr && p1stBlock != NULL_ptr && p2ndBlock != NULL_ptr)
 	{
-		cnt++;
 		p1stBlock->length = p1stBlock->length + p2ndBlock->length + sizeof(block_t);
 		kErrorState = FreeList_DeleteBlock(pList, p2ndBlock);
 	}
@@ -213,7 +210,7 @@ block_t *FreeList_FindSuitableBlock(freeList_t *pList, uint32_t blockLength)
 		#elif SEARCHING_ALGORITHM == BEST_FIT
 		/*
 			TODO: Add implementation of best fit 
-		 */
+		*/
 		#endif
 	}
 	return pSuitableBlock;
