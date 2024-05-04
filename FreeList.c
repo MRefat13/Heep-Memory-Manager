@@ -1,5 +1,5 @@
 /*
- * DoublyLinkedList.c
+ * FreeList.c
  *
  *  Created on: Nov 3, 2022
  *      Author: Mohamed Refat
@@ -11,7 +11,7 @@
 #include "HMM_Config.h"
 
 extern void *pMyHeapTop;
-
+extern void *pCurrentProgBreak;
 void FreeList_Init(freeList_t *pList)
 {
 	pList->pHead = NULL_ptr;
@@ -40,7 +40,6 @@ error_t FreeList_InsertBlock(freeList_t *pList, block_t *pBlock)
 					of the linked list
 				Check if the address of the pBlock > address of  pTempBlock 
 					--> this mean we have to check the next node
-				Note: After the while loop the address of pTempBlock	
 				Note: if the pTempBlock->pNext == Null --> this mean we reach the end of the list
 			*/
 			while( pTempBlock->pNext != NULL_ptr)
@@ -166,7 +165,7 @@ void *FreeList_SplitBlock(freeList_t *pList, block_t *pBlock, uint32_t splittedS
 		// Delete old block from the free list
 		kErrorState &= FreeList_DeleteBlock(pList, pBlock);
 		// Check if there is enough space to insert the meta data of the splitted block
-		if ( pBlock->length - splittedSize > sizeof(block_t))
+		if ( pBlock->length - splittedSize >= sizeof(block_t))
 		{
 			block_t *pNewBlock = ((block_t *) (  ((char*)pBlock)+sizeof(block_t) + splittedSize ) );
 			pNewBlock->length = pBlock->length - splittedSize - sizeof(block_t);
@@ -197,15 +196,13 @@ block_t *FreeList_FindSuitableBlock(freeList_t *pList, uint32_t blockLength)
 		#if SEARCHING_ALGORITHM == FIRST_FIT
 		while (pIteratorBlock != NULL_ptr)
 		{
-			if ( pIteratorBlock->length < blockLength )
-			{
-				pIteratorBlock = pIteratorBlock->pNext;
-			}else
+			if (pIteratorBlock->length >= blockLength /* && pIteratorBlock->length != 0 */)
 			{
 				// Case a block with an equal or grater size is founded
 				pSuitableBlock = pIteratorBlock;
 				break;
 			}
+			pIteratorBlock = pIteratorBlock->pNext;
 		}
 		#elif SEARCHING_ALGORITHM == BEST_FIT
 		/*
@@ -229,6 +226,7 @@ error_t FreeList_LowerProgramBreak(freeList_t *pList)
 			uint32_t blockLength = pList->pTail->length;
 			// Get the difference between pMyHeapTop and the program break
 			uint32_t diff = (char *)sbrk(0) - (char *)pMyHeapTop;
+			pCurrentProgBreak = sbrk(0);
 			// Get number of unallocated bytes
 			uint32_t unallocated = blockLength + diff;
 			// Check if the memory unallocated  is larger than the program break step
@@ -245,6 +243,7 @@ error_t FreeList_LowerProgramBreak(freeList_t *pList)
 					pList->pTail->length = pList->pTail->length - diff;
 					// Update the top of the my heap
 					pMyHeapTop = sbrk(0);
+					pCurrentProgBreak = sbrk(0);
 				}else
 				{
 					kErrorState = kError;

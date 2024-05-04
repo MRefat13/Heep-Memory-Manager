@@ -1,3 +1,13 @@
+/**
+ * @file HMM.c
+ * @author Mohamed Refat
+ * @brief 
+ * @version 0.1
+ * @date 2024-04-14
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
 #include <unistd.h>
 #include <assert.h>
 #include <string.h>
@@ -6,8 +16,8 @@
 #include "FreeList.h"
 #include "HMM.h"
 
-
 void *pMyHeapTop = NULL_ptr;
+void *pCurrentProgBreak = NULL_ptr;
 freeList_t list;
 #define GetProgBreak() (sbrk(0))
 
@@ -33,7 +43,6 @@ static uint32_t customCeil(f32_t num) {
 
 void *malloc(uint32_t size)
 {   
-    // printf("Allocated memory of size %d\n", size);
     void *pReturnAddress = NULL_ptr;
     block_t *pSuitableBlock = NULL_ptr;
     error_t kErrorState = kNoError;
@@ -81,6 +90,7 @@ void *malloc(uint32_t size)
         {
             // Extend the heap by increasing the program break
             pMyHeapTop = sbrk(SIZE_OF_PAGE * NUM_OF_PAGES * mulFactor);
+            pCurrentProgBreak = GetProgBreak();
             if ( pMyHeapTop != SBRK_ERROR)
             {
                 /* 
@@ -102,6 +112,7 @@ void *malloc(uint32_t size)
             {
                 kErrorState = kError;
             }
+            pCurrentProgBreak = GetProgBreak();
         }
     }
 
@@ -116,28 +127,29 @@ void *malloc(uint32_t size)
             // update the top of the heap
             pMyHeapTop = (void*)((char*)pMyHeapTop + totalSize);
         }
-
-        //metaData_t locMetaData = {size, ALLOCATED_SIGNATURE};
         // Add Meta Data to the reserved block of memory
+        if (pMyHeapTop > GetProgBreak())
+        {
+            assert(0&&"[Malloc]A7aaaaa");
+        }
         ((metaData_t*)pReturnAddress)->length = size;
         ((metaData_t*)pReturnAddress)->signature = ALLOCATED_SIGNATURE;
         // Increment the returned address by the size of the meta data block
         // cast it first to (char *) to make the step size of the ptr 1 byte
         pReturnAddress = (void*)((char *)pReturnAddress+sizeof(metaData_t));
     }
+
     return pReturnAddress;
 }
 
 
 void *calloc(uint32_t nmemb, uint32_t size)
 {
-    // printf("Allocated memory of size %d\n", size);
     void *pReturnAddress = NULL_ptr;
-    Size_alignment(size);
-    pReturnAddress =  malloc(nmemb * size);
-    // Fill the allocated data with zeros
-    if ( pReturnAddress != NULL_ptr)
+    if ( nmemb != 0 && size !=0)
     {
+        pReturnAddress =  malloc(nmemb * size);
+        // Fill the allocated block with zeros
         pReturnAddress = memset(pReturnAddress, 0, size);
     }
     return pReturnAddress;
@@ -145,8 +157,8 @@ void *calloc(uint32_t nmemb, uint32_t size)
 
 void *realloc(void *ptr, uint32_t size)
 {
-    // printf("Allocated memory of size %d\n", size);
-    void *pReturnAddress = NULL_ptr;
+    
+    void *pReturnAddress = ptr;
     // Case[1] 
     if ( ptr == NULL_ptr)
     {
@@ -156,7 +168,7 @@ void *realloc(void *ptr, uint32_t size)
     else if ( size == 0)
     {
         free(ptr);
-        pReturnAddress = ptr;
+        //pReturnAddress = ptr;
     }
     //Case[3]
     else
@@ -169,7 +181,7 @@ void *realloc(void *ptr, uint32_t size)
             // First align the size to 8 byte
             Size_alignment(size);
             // Case[3-1-1] : if size < old block size
-            if ( size < pMetaData->length)
+            if ( size <= pMetaData->length)
             {
                 uint32_t remainingSize = pMetaData->length - size;
                 pReturnAddress = ptr;
@@ -195,20 +207,11 @@ void *realloc(void *ptr, uint32_t size)
                 pReturnAddress = malloc(size);
                 if ( pReturnAddress != NULL_ptr)
                 {
-                   uint64t iterator = 0;
-                   for ( iterator = 0; iterator < (pMetaData->length)/8; iterator++ )
-                   {
-                        ((sint64_t*)pReturnAddress)[iterator] = ((sint64_t*)ptr)[iterator];
-                   }
-                   // Free the old block
+                   memcpy(pReturnAddress,ptr,pMetaData->length);
                    free(ptr);
                 }
             }
         }
-    }
-    if (pReturnAddress == NULL_ptr)
-    {
-        pReturnAddress = ptr;
     }
     return pReturnAddress;
 }
@@ -251,6 +254,10 @@ void free(void *ptr)
                     TODO: 
                 */
                assert(0&&"Cannot lower program break\n");
+            }
+            if ( GetProgBreak() < pMyHeapTop)
+            {
+                assert(0&&"[LOWER Program break ] A7aaaaa");
             }
         }else
         {

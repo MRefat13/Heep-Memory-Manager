@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "hmm_config.h": "c",
+        "hmm.h": "c",
+        "stdlib.h": "c",
+        "std_types.h": "c",
+        "freelist.h": "c"
+    }
+}

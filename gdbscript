@@ -1,0 +1,16 @@
+set logging file gdb.out
+set logging redirect on
+set logging overwrite on
+set logging enabled on
+
+set $x = list->pHead
+
+while ($x != 0)
+    p/x $x
+    p/x *(block_t *)$x
+    if ((((block_t *)$x)->pNext != 0) && (((block_t *)$x)->pNext != (char *)$x + ((block_t *)$x)->length + sizeof(block_t)) )
+    end
+    set $x = ((block_t *)$x)->pNext
+end
+
+set logging enabled off
