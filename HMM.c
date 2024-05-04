@@ -17,7 +17,6 @@
 #include "HMM.h"
 
 void *pMyHeapTop = NULL_ptr;
-void *pCurrentProgBreak = NULL_ptr;
 freeList_t list;
 #define GetProgBreak() (sbrk(0))
 
@@ -90,7 +89,6 @@ void *malloc(uint32_t size)
         {
             // Extend the heap by increasing the program break
             pMyHeapTop = sbrk(SIZE_OF_PAGE * NUM_OF_PAGES * mulFactor);
-            pCurrentProgBreak = GetProgBreak();
             if ( pMyHeapTop != SBRK_ERROR)
             {
                 /* 
@@ -112,7 +110,6 @@ void *malloc(uint32_t size)
             {
                 kErrorState = kError;
             }
-            pCurrentProgBreak = GetProgBreak();
         }
     }
 
@@ -126,11 +123,6 @@ void *malloc(uint32_t size)
             pReturnAddress = pMyHeapTop;
             // update the top of the heap
             pMyHeapTop = (void*)((char*)pMyHeapTop + totalSize);
-        }
-        // Add Meta Data to the reserved block of memory
-        if (pMyHeapTop > GetProgBreak())
-        {
-            assert(0&&"[Malloc]A7aaaaa");
         }
         ((metaData_t*)pReturnAddress)->length = size;
         ((metaData_t*)pReturnAddress)->signature = ALLOCATED_SIGNATURE;
@@ -254,10 +246,6 @@ void free(void *ptr)
                     TODO: 
                 */
                assert(0&&"Cannot lower program break\n");
-            }
-            if ( GetProgBreak() < pMyHeapTop)
-            {
-                assert(0&&"[LOWER Program break ] A7aaaaa");
             }
         }else
         {
