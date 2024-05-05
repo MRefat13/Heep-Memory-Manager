@@ -204,9 +204,26 @@ block_t *FreeList_FindSuitableBlock(freeList_t *pList, uint32_t blockLength)
 			pIteratorBlock = pIteratorBlock->pNext;
 		}
 		#elif SEARCHING_ALGORITHM == BEST_FIT
-		/*
-			TODO: Add implementation of best fit 
-		*/
+		bool_t flag = kFalse;
+		while (pIteratorBlock != NULL_ptr)
+		{
+			if (pIteratorBlock->length == blockLength )
+			{
+				pSuitableBlock = pIteratorBlock;
+				break;
+			}else if ( pIteratorBlock->length > blockLength && flag == kFalse)
+			{
+				// Case a block with an equal or grater size is founded
+				pSuitableBlock = pIteratorBlock;
+				flag = kTrue;
+				
+			}else if ( flag == kTrue && pIteratorBlock->length < pSuitableBlock->length &&
+										pIteratorBlock->length > blockLength  )
+			{
+				pSuitableBlock = pIteratorBlock;
+			}
+			pIteratorBlock = pIteratorBlock->pNext;
+		}
 		#endif
 	}
 	return pSuitableBlock;
