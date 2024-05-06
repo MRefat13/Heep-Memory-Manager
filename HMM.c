@@ -18,6 +18,7 @@
 
 /*--------------- Global variable section ----------------*/
 void *pMyHeapTop = NULL_ptr;
+void *pCurProgBreak = NULL_ptr;
 freeList_t list;
 
 /*--------------- Function Like macro variable section ----------------*/
@@ -73,7 +74,7 @@ static error_t helper_LowerProgramBreak(freeList_t *pList)
 			// Get the last block length
 			uint32_t blockLength = pList->pTail->length;
 			// Get the difference between pMyHeapTop and the program break
-			uint32_t diff = (char *)GetProgBreak() - (char *)pMyHeapTop;
+			uint32_t diff = (char *)pCurProgBreak - (char *)pMyHeapTop;
 			// Get number of unallocated bytes
 			uint32_t unallocated = blockLength + diff;
 			// Check if the memory unallocated  is larger than the program break step
@@ -90,6 +91,8 @@ static error_t helper_LowerProgramBreak(freeList_t *pList)
 					pList->pTail->length = pList->pTail->length - diff;
 					// Update the top of the my heap
 					pMyHeapTop = GetProgBreak();
+                    // Update the current program break
+                    pCurProgBreak = GetProgBreak();
 				}else
 				{
 					kErrorState = kError;
@@ -158,6 +161,8 @@ void *malloc(uint32_t size)
             if ( pMyHeapTop != SBRK_ERROR)
             {
                 FreeList_Init(&list);
+                // Update the current program break
+                pCurProgBreak = GetProgBreak();
             }else
             {
                 kErrorState = kError;
@@ -172,6 +177,8 @@ void *malloc(uint32_t size)
             {
                 kErrorState = kError;
             }
+            // Update the current program break
+            pCurProgBreak = GetProgBreak();
         }
     }
 
