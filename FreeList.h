@@ -11,81 +11,95 @@
 #ifndef FREE_LIST_H_
 #define FREE_LIST_H_
 
+/**
+ * @struct block_t
+ * @brief Structure representing a memory block in the heap.
+ */
 typedef struct block_t
 {
-	struct block_t *pPrevious;
-	struct block_t *pNext;
-	uint32_t length;
-}block_t;
+    struct block_t *pPrevious; /**< Pointer to the previous block in the heap. */
+    struct block_t *pNext;     /**< Pointer to the next block in the heap. */
+    uint32_t length;           /**< Length of the memory block. */
+} block_t;
 
+/**
+ * @struct freeList_t
+ * @brief Structure representing the free list of memory blocks in the heap.
+ */
 typedef struct
 {
-	block_t *pHead;
-	block_t *pTail;
-	uint16_t size;
-}freeList_t;
+    block_t *pHead;    /**< Pointer to the head block of the free list. */
+    block_t *pTail;    /**< Pointer to the tail block of the free list. */
+    uint16_t size;     /**< Number of blocks in the free list. */
+} freeList_t;
 
+/**
+ * @brief Initializes a free list.
+ *
+ * @param pList Pointer to the free list to be initialized.
+ */
 void FreeList_Init(freeList_t *pList);
+
+/**
+ * @brief Inserts a block into the free list.
+ *
+ * @param pList   Pointer to the free list.
+ * @param pBlock  Pointer to the block to be inserted.
+ * @return        An error code indicating the success or failure of the insertion operation.
+ */
 error_t FreeList_InsertBlock(freeList_t *pList, block_t *pBlock);
 
 /**
- * @brief This function is used to check if the two blocks are contigious in the memory 
- * 			or not  
- * 
- * @param pList pointer the the head of the list 
- * @param p1stBlock Pointer to the first block
- * @param p2ndBlock Pointer to the second block
- * @return bool_t 
+ * @brief Checks if two blocks are contiguous in memory.
+ *
+ * @param pList      Pointer to the head of the free list.
+ * @param p1stBlock  Pointer to the first block.
+ * @param p2ndBlock  Pointer to the second block.
+ * @return           True if the blocks are contiguous, false otherwise.
  */
 bool_t FreeList_IsContigious(freeList_t *pList, block_t *p1stBlock, block_t *p2ndBlock);
 
 /**
- * @brief This function is used to merge two contigious blocks of memory
- * 			it adds the size of the first block to the size of the second block and
- * 			store the result in the first block then remove the second block from the list
- * 
- * @param pList 
- * @param p1stBlock Pointer to the first block
- * @param p2ndBlock Pointer to the second block
- * @note This function works only if the two blocks are contigious in the memory
- * @return error_t 
+ * @brief Merges two contiguous blocks of memory.
+ *
+ * @param pList      Pointer to the free list.
+ * @param p1stBlock  Pointer to the first block.
+ * @param p2ndBlock  Pointer to the second block.
+ * @return           An error code indicating the success or failure of the merge operation.
  */
 error_t FreeList_MergeBlocks(freeList_t *pList, block_t *p1stBlock, block_t *p2ndBlock);
 
 /**
- * @brief This function is used to split a block of memory
- * 
- * @param pList        : Pointer to the free List
- * @param pBlock       : Pointer to the old block of memory
- * @param splittedSize : Size of the splitted part from the block
- * 
- * @return void* : Pointer to the old block of memory[pBlock]
- * 			- The return will be null if it  failed to split due to some cases included:
- *             -If Ihe size of the splitted part is larger than the block size
- * 			   -If one of the parameter is Null
+ * @brief Splits a block of memory.
+ *
+ * @param pList         Pointer to the free list.
+ * @param pBlock        Pointer to the old block of memory.
+ * @param splittedSize  Size of the splitted part from the block.
+ * @return              Pointer to the old block of memory (pBlock). Null if the split operation failed.
+ * @note                This function will fail if Ihe size of the splitted part is larger than the block size
  */
 void *FreeList_SplitBlock(freeList_t *pList, block_t *pBlock, uint32_t splittedSize);
 
-
+/**
+ * @brief Deletes a block from the free list.
+ *
+ * @param pList    Pointer to the free list.
+ * @param pBlock   Pointer to the block to be deleted.
+ * @return         An error code indicating the success or failure of the deletion operation.
+ */
 error_t FreeList_DeleteBlock(freeList_t *pList, block_t *pBlock);
 
+
 /**
- * @brief This function is used to find a block in the free list with a suitable size
- * 			it does this by searching in the free list and it uses a two techniques
- * 			[Fist-First and Best-Fet]  based in a macro in config file 
- * 
- * @param pList       : Pointer to the free List
- * @param blockLength : desired block length
- * @return block_t*   : pointer to the nearest block to the desired one
- * 				The return is null if desired block is larger than all the blocks in the list
+ * @brief Finds a block in the free list with a suitable size.
+ *
+ * @param pList        Pointer to the free list.
+ * @param blockLength  Desired block length.
+ * @return             Pointer to the nearest block to the desired one. 
+ * 						Null if the desired block is larger than all the blocks in the list.
+ * @note  This function search in the free  by two techniques [ Best-Fet or First-Fit]
+ * 			you can change the technique for the configuration fle
  */
 block_t *FreeList_FindSuitableBlock(freeList_t *pList, uint32_t blockLength);
 
-
-error_t FreeList_LowerProgramBreak(freeList_t *pList);
-
-void FreeList_traverse(freeList_t *pList, void (*pFun)(uint32_t blockLength));
-error_t  FreeList_IsEmpty(freeList_t *pList);
-error_t  FreeList_IsFull(freeList_t *pList);
-uint32_t FreeList_GetSize(freeList_t *pList);
 #endif /* FREE_LIST_H_ */
