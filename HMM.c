@@ -16,11 +16,17 @@
 #include "FreeList.h"
 #include "HMM.h"
 
+/*--------------- Global variable section ----------------*/
 void *pMyHeapTop = NULL_ptr;
 freeList_t list;
+
+/*--------------- Function Like macro variable section ----------------*/
 #define GetProgBreak() (sbrk(0))
 
-
+/**
+ * @brief This function is used to align the size to 8 byte 
+ * 
+ */
 #define Size_alignment(size)\
 do\
 {\
@@ -30,7 +36,15 @@ do\
     }\
 }while (0)
 
-static uint32_t customCeil(f32_t num) {
+
+/*--------------- Static function section ----------------*/
+/**
+ * @brief This function is used to round up the float number to the next integer
+ * 
+ * @param num float number
+ * @return uint32_t rounded number
+ */
+static uint32_t helper_CustomCeil(f32_t num) {
     int integerPart = (int)num;
     double fractionalPart = num - integerPart;
     if (fractionalPart > 0) {
@@ -38,6 +52,58 @@ static uint32_t customCeil(f32_t num) {
     } else {
         return integerPart;
     }
+}
+/**
+ * @brief This function used to lower the program break
+ *          it first check if there is no allocated memory after the last free block
+ *          if true get the block and check if the length is grater than the program break step 
+ * 
+ * @param pList 
+ * @return error_t 
+ */
+static error_t helper_LowerProgramBreak(freeList_t *pList)
+{
+	error_t kErrorState = kNoError;
+	if ( NULL_ptr != pList )
+	{
+		// Check if there is no allocated blocks after the last block in the free list
+		void *pBlockTopAddress = (void*) (( (char *)(pList->pTail)) + pList->pTail->length + sizeof(block_t));
+		if ( pMyHeapTop == pBlockTopAddress)
+		{
+			// Get the last block length
+			uint32_t blockLength = pList->pTail->length;
+			// Get the difference between pMyHeapTop and the program break
+			uint32_t diff = (char *)GetProgBreak() - (char *)pMyHeapTop;
+			// Get number of unallocated bytes
+			uint32_t unallocated = blockLength + diff;
+			// Check if the memory unallocated  is larger than the program break step
+			if ( unallocated > SIZE_OF_PAGE*NUM_OF_PAGES )
+			{
+				// Get number of unallocated steps
+				uint32_t mulFactor = unallocated / (SIZE_OF_PAGE*NUM_OF_PAGES);
+				sint64_t decrements= (-1) * (sint64_t)(SIZE_OF_PAGE*NUM_OF_PAGES) * mulFactor;
+				if ( sbrk( decrements) != SBRK_ERROR )
+				{
+					// Get the difference between program break and the pMyHeapTop
+					uint32_t diff = (char *)pMyHeapTop - (char *)GetProgBreak();
+					// Update the size of the last block of memory
+					pList->pTail->length = pList->pTail->length - diff;
+					// Update the top of the my heap
+					pMyHeapTop = GetProgBreak();
+				}else
+				{
+					kErrorState = kError;
+				}
+			}
+		}else
+		{
+			// There a data allocated after the last free block
+		}
+	}else
+	{
+		kErrorState = kError;
+	}
+	return kErrorState;
 }
 
 void *malloc(uint32_t size)
@@ -50,7 +116,7 @@ void *malloc(uint32_t size)
     Size_alignment(size);
     // Calculate the total size
     uint32_t totalSize = size + sizeof(metaData_t);
-    // 1 - Search in the Free list to fund a suitable free block
+    // Search in the Free list to fund a suitable free block
     pSuitableBlock = FreeList_FindSuitableBlock(&list, size);
     // Case[1]: There is a free block in the free list is suitable
     if ( pSuitableBlock != NULL_ptr )
@@ -68,7 +134,7 @@ void *malloc(uint32_t size)
             pReturnAddress = (void*)pSuitableBlock;
         }
     }
-    // Case[2]: There is no suitable free block in the free list
+    // Case[2]: There is no suitable free block in the free list or it's empty
     else if ( pSuitableBlock == NULL_ptr)
     {
         /* 
@@ -81,20 +147,16 @@ void *malloc(uint32_t size)
         {
             // Calculating how may blocks should be allocated
             // the size of the block here is [SIZE_OF_PAGE * NUM_OF_PAGES]
-            mulFactor = customCeil( (f32_t)totalSize / (SIZE_OF_PAGE * NUM_OF_PAGES));
+            mulFactor = helper_CustomCeil( (f32_t)totalSize / (SIZE_OF_PAGE * NUM_OF_PAGES));
         }
 
-        // Case[2-1]: Fist malloc call
+        // Case[2-1]: First malloc call
         if ( pMyHeapTop == NULL_ptr )
         {
             // Extend the heap by increasing the program break
             pMyHeapTop = sbrk(SIZE_OF_PAGE * NUM_OF_PAGES * mulFactor);
             if ( pMyHeapTop != SBRK_ERROR)
             {
-                /* 
-                    TODO: Make Free list init in free function not here
-                */
-                // Initialize the free list
                 FreeList_Init(&list);
             }else
             {
@@ -160,7 +222,6 @@ void *realloc(void *ptr, uint32_t size)
     else if ( size == 0)
     {
         free(ptr);
-        //pReturnAddress = ptr;
     }
     //Case[3]
     else
@@ -190,7 +251,6 @@ void *realloc(void *ptr, uint32_t size)
                 }
                 // Update the meta data
                 pMetaData->length = size;
-                
             }
             // Case[3-1-2] : if size > old block size
             else if ( size > pMetaData->length)
@@ -239,12 +299,9 @@ void free(void *ptr)
                     kErrorState &= FreeList_MergeBlocks(&list, pblock->pPrevious, pblock);
                 }
             }
-            kErrorState = FreeList_LowerProgramBreak(&list);
+            kErrorState = helper_LowerProgramBreak(&list);
             if ( kErrorState == kError)
             {
-                /* 
-                    TODO: 
-                */
                assert(0&&"Cannot lower program break\n");
             }
         }else
