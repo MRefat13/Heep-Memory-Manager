@@ -8,17 +8,18 @@ CC := gcc
 CFLAGS := -g -Wall
 
 # Source files
-SRC := HMM.c FreeList.c
+SRC := $(shell ls *.c)
+SRC_LIB := HMM.c FreeList.c
 SOURCE := main.c
 
 # Object files (for executable)
 OBJ := $(SRC:.c=.o)
 
 # Object files (for shared library)
-OBJ_SHARED := $(SRC:.c=.dynamic.o)
+OBJ_SHARED := $(SRC_LIB:.c=.dynamic.o)
 
 # Object files (for static library)
-OBJ_STATIC := $(SRC:.c=.static.o)
+OBJ_STATIC := $(SRC_LIB:.c=.static.o)
 
 # Header files
 INC := $(shell ls *.h)
@@ -84,4 +85,8 @@ clean:
 	@rm -f *.exe
 	@rm -f $(SHARED_LIB)
 	@rm -f $(STATIC_LIB)
+	@echo "[Makefile][clean] : Cleaned successfully."
+
+clean_obj:
+	@rm -f *.o
 	@echo "[Makefile][clean] : Cleaned successfully."

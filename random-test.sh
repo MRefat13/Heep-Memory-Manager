@@ -1,5 +1,8 @@
 #!/bin/bash
 
+
+# before using it move the free_and_sbrk.c from test_debug folder to main the working Directory
+
 # Function to generate random integer within a range
 function randomInt() {
   local min=$1
