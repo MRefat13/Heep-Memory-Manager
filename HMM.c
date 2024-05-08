@@ -124,12 +124,24 @@ void *malloc(uint32_t size)
     // Case[1]: There is a free block in the free list is suitable
     if ( pSuitableBlock != NULL_ptr )
     {
+        uint32_t remainingLength = pSuitableBlock->length - size;
         // Case[1-1]: If the free block is larger than the desired length[size]
-        if ( pSuitableBlock->length > size)
+        //  and the remaining Length is large than meta data
+        if ( pSuitableBlock->length > size && remainingLength > sizeof(metaData_t))
         {
             pReturnAddress = FreeList_SplitBlock(&list, pSuitableBlock, size);
         }
-        // Case[1-2]: If the free block length is equal to the desired length[size]
+        // Case[1-2]: If the free block is larger than the desired length[size]
+        //  but the remaining Length is less than meta data
+        else if ( pSuitableBlock->length > size )
+        {
+            // Update the desired size to the founded free block size
+            size = pSuitableBlock->length;
+            pReturnAddress = (void*)pSuitableBlock;
+            // Remove the free block from the free list
+            kErrorState &= FreeList_DeleteBlock(&list, pSuitableBlock);
+        }
+        // Case[1-3]: If the free block length is equal to the desired length[size]
         else if ( pSuitableBlock->length == size)
         {
             // Remove the free block from the free list
