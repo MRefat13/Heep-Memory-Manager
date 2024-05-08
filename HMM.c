@@ -241,7 +241,7 @@ void *realloc(void *ptr, uint32_t size)
             // First align the size to 8 byte
             Size_alignment(size);
             // Case[3-1-1] : if size < old block size
-            if ( size <= pMetaData->length)
+            if ( size < pMetaData->length)
             {
                 uint32_t remainingSize = pMetaData->length - size;
                 pReturnAddress = ptr;
@@ -251,13 +251,16 @@ void *realloc(void *ptr, uint32_t size)
                     // Creat a free block and insert it in the free list
                     block_t *pblock = (block_t *)((char*)ptr + size);
                     pblock->length = remainingSize - sizeof(metaData_t);
+                    // Update the meta data
                     FreeList_InsertBlock(&list, pblock);
-                }else
-                {
-                    // The remaining size will be fragmented 
+                    // Check if The next block is a free block
+                    if ( FreeList_IsContigious(&list,pblock, pblock->pNext) == kTrue)
+                    {
+                        // Merge these two blocks of memory
+                        FreeList_MergeBlocks(&list, pblock, pblock->pNext);
+                    }
+                    pMetaData->length = size;
                 }
-                // Update the meta data
-                pMetaData->length = size;
             }
             // Case[3-1-2] : if size > old block size
             else if ( size > pMetaData->length)
