@@ -10,7 +10,10 @@ CFLAGS := -g -Wall
 # Source files
 SRC := $(shell ls *.c)
 SRC_LIB := HMM.c FreeList.c
-SOURCE := main.c
+
+# Note update the SOURCE variable with the desired file.c you want 
+#  to compile it with the project
+SOURCE := random_allocation.c
 
 # Object files (for executable)
 OBJ := $(SRC:.c=.o)
@@ -51,12 +54,12 @@ static: $(OBJ_STATIC)
 	@ar -r $(STATIC_LIB) $(OBJ_STATIC)
 	@echo "[Makefile][static] : Static library generated successfully."
 
-# Compile and link main.c with static library
+# Compile and link SOURCE.c with static library
 build_static_main: $(SOURCE) static
 	@$(CC) $(CFLAGS) $(SOURCE) -o $(TARGET)_static.exe -L. -l:$(STATIC_LIB)
 	@echo "[Makefile][build_static_main] : Compiled and linked with static library successfully."
 
-# Compile and link main.c with shared library
+# Compile and link SOURCE.c with shared library
 build_shared_main: $(SOURCE) shared
 	@$(CC) $(CFLAGS) $(SOURCE) -o $(TARGET)_shared.exe -L. -l:$(SHARED_LIB)
 	@echo "[Makefile][build_shared_main] : Compiled and linked with shared library successfully."
